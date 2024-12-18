@@ -1,0 +1,19 @@
+train: "Data/YOLO_format/train/images"
+val: "Data/YOLO_format/valid/images"
+test: "Data/YOLO_format/test/images"
+
+nc: 8
+
+names:
+  [
+    "Anger",
+    "Contempt",
+    "Disgust",
+    "Fear",
+    "Happy",
+    "Neutral",
+    "Sad",
+    "Surprise",
+  ]
+
+network: "yolo11n"
