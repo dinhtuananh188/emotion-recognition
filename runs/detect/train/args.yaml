@@ -1,8 +1,8 @@
 task: detect
 mode: train
 model: yolo11n.pt
-data: data.yaml
-epochs: 100
+data: Tu_lam_v2/data.yaml
+epochs: 300
 time: null
 patience: 100
 batch: 16

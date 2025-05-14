@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Agent - Ứng dụng đánh giá cảm xúc khuôn mặt</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="left-panel">
+            <h2>Khung Camera</h2>
+            <div class="camera-container">
+                <img src="{{ url_for('video_feed') }}" alt="Camera Feed">
+            </div>
+        </div>
+        <div class="right-panel">
+            <h2>AI - Agent</h2>
+            <div class="ai-agent-container">
+                <div class="chat-container" style="margin-left: auto;">
+                    <div id="chat-messages" class="chat-messages"></div>
+                    <div class="input-group">
+                        <input type="text" id="chat-input" placeholder="Nhập tin nhắn của bạn...">
+                        <button id="microphone"><i class="fa-solid fa-microphone"></i></button>
+                        <button id="send-button"><i class="fa-solid fa-paper-plane"></i> Gửi</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
