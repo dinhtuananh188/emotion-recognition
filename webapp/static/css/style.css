@@ -89,7 +89,7 @@ h2 {
 .audio-button {
     position: absolute;
     top: 5px;
-    right: 15%;
+    right: 12%;
     background: none;
     color: var(--primary);
     border: none;

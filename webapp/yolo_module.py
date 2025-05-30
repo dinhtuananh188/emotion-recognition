@@ -112,7 +112,7 @@ def track_labels_for_duration(frame_generator, duration=5):
         if results and len(results[0].boxes.data) > 0:
             for box in results[0].boxes.data.tolist():
                 _, _, _, _, score, class_id = box
-                if score >= 0.8:
+                if score >= 0.6:
                     english_label = emotion_model.names[int(class_id)]
                     vietnamese_label = emotion_mapping.get(english_label, "Không xác định")
                     label_counter[vietnamese_label] += 1

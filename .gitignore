@@ -3,3 +3,6 @@
 .env
 /.vscode
 /Data
+/webapp/static/audio
+/webapp/uploads
+__pycache__/

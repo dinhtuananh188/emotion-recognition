@@ -10,6 +10,8 @@ import logging
 import os
 from stt_module import transcribe_audio
 from pydub import AudioSegment
+import time
+from waitress import serve
 
 
 def convert_to_wav_mono_16k(src_path, dst_path):
@@ -30,11 +32,20 @@ app = Flask(__name__)
 app.secret_key = '123456'
 
 # Initialize camera
-try:
-    camera = initialize_camera()
-except Exception as e:
-    print(e)
-    exit()
+def safe_initialize_camera(retries=10, delay=1):
+    for i in range(retries):
+        try:
+            cam = initialize_camera()
+            if cam is not None:
+                return cam
+        except Exception as e:
+            logging.warning(f"Retry {i+1}/{retries} - Camera init failed: {e}")
+            time.sleep(delay)
+    return None
+
+# Gọi khi khởi tạo
+camera = safe_initialize_camera()
+
 
 # Ensure the 'uploads' directory exists
 uploads_dir = 'webapp/uploads'
@@ -178,4 +189,4 @@ def session_debug():
     })
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    serve(app, host="127.0.0.1", port=2402)

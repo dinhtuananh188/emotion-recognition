@@ -33,6 +33,7 @@ def youtube_search(query, max_results=1):
         items = results.get("items", [])
         if items:
             video = items[0]
+
             video_id = video["id"]["videoId"]
             snippet = video["snippet"]
             return {

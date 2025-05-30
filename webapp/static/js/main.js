@@ -64,6 +64,12 @@ function handleAudioPlayback(ttsUrl, aiMessage) {
     let isPlaying = true;
     audio.play();
 
+    // Khi phát xong thì đổi icon về ▶
+    audio.addEventListener('ended', () => {
+        playPauseButton.innerHTML = '▶';
+        isPlaying = false;
+    });
+
     playPauseButton.addEventListener('click', () => {
         if (isPlaying) {
             audio.pause();
@@ -84,20 +90,31 @@ function handleAudioPlayback(ttsUrl, aiMessage) {
 
 
 document.addEventListener('DOMContentLoaded', async () => {
-    
     try {
         const response = await fetch('/api/track_yolo');
         const result = await response.json();
         console.log('API response:', result);
-        if (result.error) {
-            console.error('Error:', result.error);
-            return;
-        }
 
         const chatMessages = document.getElementById('chat-messages');
         const aiMessage = document.createElement('div');
         aiMessage.className = 'message ai';
-        
+
+        if (!response.ok) {
+            // Nếu status code 400 hoặc 500 thì hiện lỗi
+            if (response.status === 400 || response.status === 500) {
+                aiMessage.innerHTML = 'Lỗi khi phát hiện khuôn mặt';
+                chatMessages.appendChild(aiMessage);
+                return;
+            }
+        }
+
+        if (result.error) {
+            console.error('Error:', result.error);
+            aiMessage.innerHTML = 'Lỗi khi phát hiện khuôn mặt';
+            chatMessages.appendChild(aiMessage);
+            return;
+        }
+
         if (result.response) {
             aiMessage.innerHTML = result.response;
         }
@@ -110,8 +127,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     } catch (error) {
         console.error('Error:', error);
+        const chatMessages = document.getElementById('chat-messages');
+        const aiMessage = document.createElement('div');
+        aiMessage.className = 'message ai';
+        aiMessage.innerHTML = 'Lỗi khi phát hiện khuôn mặt';
+        chatMessages.appendChild(aiMessage);
     }
 });
+
 
 document.getElementById('send-button').addEventListener('click', async () => {
     const sendButton = document.getElementById('send-button');
