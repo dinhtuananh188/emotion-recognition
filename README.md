@@ -4,12 +4,12 @@
 
 ### 🖥️ Yêu cầu hệ thống / System Requirements
 - Python 3.10
-- CUDA 12.6 (for GPU support)
+- CUDA 12.4 (for GPU support)
 
 ### 📦 Thư viện Python / Python Dependencies
 ```bash
 pip install -r requirements.txt
-pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
+pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124 (Nếu muốn dùng GPU)
 ```
 
 > ⚠️ **Lưu ý / Note**: Khuyến khích sử dụng GPU để có hiệu suất tốt hơn  
