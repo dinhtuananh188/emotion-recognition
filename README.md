@@ -1,4 +1,4 @@
-# Hệ Thống Nhận Diện Khuôn Mặt / Face Recognition System
+# Hệ Thống Nhận Diện Cảm Xúc Khuôn Mặt / Face Emotion Recognition System
 
 ## 📋 Yêu cầu / Requirements
 
