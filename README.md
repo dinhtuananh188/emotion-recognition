@@ -5,12 +5,16 @@
 ### 🖥️ Yêu cầu hệ thống / System Requirements
 - Python 3.10
 - CUDA 12.4 (for GPU support)
-- Cài Chocolatery qua PowerShell Quyền Admin
+- Cài Chocolatery qua PowerShell Quyền Admin:
+```bash 
 Set-ExecutionPolicy Bypass -Scope Process -Force; `
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; `
 iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-
--  Sau đó chạy : choco install ffmpeg -y
+```
+-  Sau đó chạy :
+```bash
+choco install ffmpeg -y
+```
 
 ### 📦 Thư viện Python / Python Dependencies
 ```bash
