@@ -212,7 +212,7 @@ async function processFrameWithYOLO() {
     } finally {
         isProcessing = false;
         // Process the next frame after a short delay
-        setTimeout(processFrameWithYOLO, 100); // Adjust delay as needed for server speed
+        setTimeout(processFrameWithYOLO, 100); 
     }
 }
 
