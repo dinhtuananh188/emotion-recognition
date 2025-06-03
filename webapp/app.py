@@ -18,7 +18,7 @@ app = Flask(__name__)
 app.secret_key = '123456'
 
 # Ensure the 'uploads' directory exists
-
+uploads_dir = 'webapp/uploads'
 
 @app.route('/')
 def index():
@@ -78,7 +78,7 @@ def track_yolo():
             except Exception as e:
                 logging.error(f"Error deleting file {file_path}: {e}")
         
-        uploads_dir = 'webapp/uploads'
+        
         os.makedirs(uploads_dir, exist_ok=True)
 
         # Clear all files in the 'uploads' directory

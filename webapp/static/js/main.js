@@ -163,12 +163,18 @@ function handleAudioPlayback(ttsUrl, aiMessage) {
 }
 
 // Function to process frame with YOLO
+let isProcessing = false;
 async function processFrameWithYOLO() {
-    if (!videoElement || !canvasElement || !canvasContext) return;
+    if (!videoElement || !canvasElement || !canvasContext || isProcessing) return;
     
+    isProcessing = true;
+
     try {
         const frameData = captureBrowserFrame();
-        if (!frameData) return;
+        if (!frameData) {
+            isProcessing = false;
+            return;
+        }
 
         const response = await fetch('/api/yolo', {
             method: 'POST',
@@ -181,6 +187,7 @@ async function processFrameWithYOLO() {
         const result = await response.json();
         if (result.error) {
             console.error('Error processing frame:', result.error);
+            // Keep processing even if there's an error with this frame
             return;
         }
 
@@ -199,8 +206,13 @@ async function processFrameWithYOLO() {
             canvasElement.style.display = 'block';
         };
         img.src = 'data:image/jpeg;base64,' + result.processed_frame;
+
     } catch (error) {
         console.error('Error processing frame:', error);
+    } finally {
+        isProcessing = false;
+        // Process the next frame after a short delay
+        setTimeout(processFrameWithYOLO, 100); // Adjust delay as needed for server speed
     }
 }
 
@@ -208,15 +220,23 @@ async function processFrameWithYOLO() {
 let processingInterval = null;
 
 function startFrameProcessing() {
-    if (processingInterval) return;
-    processingInterval = setInterval(processFrameWithYOLO, 100); // Process every 100ms for ~10 FPS
-}
-
-function stopFrameProcessing() {
+    // Stop the interval if it was running
     if (processingInterval) {
         clearInterval(processingInterval);
         processingInterval = null;
     }
+    // Start the processing loop
+    processFrameWithYOLO();
+}
+
+function stopFrameProcessing() {
+    // This function is not used in the new loop, but keep it for completeness
+    // if the interval was ever used elsewhere.
+    if (processingInterval) {
+        clearInterval(processingInterval);
+        processingInterval = null;
+    }
+    // No need to stop setTimeout loops explicitly unless you add a flag
 }
 
 // Update DOMContentLoaded to start frame processing
@@ -224,8 +244,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const success = await initializeBrowserCamera();
     if (success) {
         startFrameProcessing();
-        // Call trackYOLO instead of direct fetch
-        await trackYOLO();
         
         // Set timer to log YOLO labels after 5 seconds
         setTimeout(() => {
