@@ -18,17 +18,7 @@ app = Flask(__name__)
 app.secret_key = '123456'
 
 # Ensure the 'uploads' directory exists
-uploads_dir = 'webapp/uploads'
-os.makedirs(uploads_dir, exist_ok=True)
 
-# Clear all files in the 'uploads' directory
-for file_name in os.listdir(uploads_dir):
-    file_path = os.path.join(uploads_dir, file_name)
-    try:
-        if os.path.isfile(file_path):
-            os.unlink(file_path)
-    except Exception as e:
-        logging.error(f"Error deleting file {file_path}: {e}")
 
 @app.route('/')
 def index():
@@ -76,7 +66,30 @@ def process_yolo():
 def track_yolo():
     try:
         logging.debug("Starting YOLO tracking...")
+        audio_dir = 'webapp/static/audio'
+        os.makedirs(audio_dir, exist_ok=True)
+
+        # Clear all files in the 'uploads' directory
+        for file_name in os.listdir(audio_dir):
+            file_path = os.path.join(audio_dir, file_name)
+            try:
+                if os.path.isfile(file_path):
+                    os.unlink(file_path)
+            except Exception as e:
+                logging.error(f"Error deleting file {file_path}: {e}")
         
+        uploads_dir = 'webapp/uploads'
+        os.makedirs(uploads_dir, exist_ok=True)
+
+        # Clear all files in the 'uploads' directory
+        for file_name in os.listdir(uploads_dir):
+            file_path = os.path.join(uploads_dir, file_name)
+            try:
+                if os.path.isfile(file_path):
+                    os.unlink(file_path)
+            except Exception as e:
+                logging.error(f"Error deleting file {file_path}: {e}")
+
         # Get base64 image data from request
         image_data = request.json.get('frame')
         if not image_data:
@@ -169,4 +182,4 @@ def session_debug():
     })
 
 if __name__ == '__main__':
-    serve(app, host="127.0.0.1", port=2402)
+    serve(app, host="0.0.0.0", port=2402)
