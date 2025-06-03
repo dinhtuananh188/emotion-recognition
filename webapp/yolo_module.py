@@ -42,9 +42,10 @@ def process_frame_with_yolo(frame):
     draw = ImageDraw.Draw(pil_image)
 
     results = face_detector.process(rgb_frame)
+    last_emotion = None
 
     if not results.detections:
-        return frame
+        return frame, None
 
     for detection in results.detections:
         bbox = detection.location_data.relative_bounding_box
@@ -80,6 +81,9 @@ def process_frame_with_yolo(frame):
         viet_emotion = emotion_mapping.get(english_emotion, "Không xác định")
         box_color = emotion_colors.get(english_emotion, (128, 128, 128))
 
+        # Lưu lại emotion cuối cùng được phát hiện
+        last_emotion = viet_emotion
+
         # Vẽ bounding box quanh khuôn mặt gốc
         draw.rectangle([x1, y1, x2, y2], outline=box_color, width=3)
 
@@ -95,29 +99,5 @@ def process_frame_with_yolo(frame):
         draw.rectangle([text_bbox[0]-2, text_bbox[1]-2, text_bbox[2]+2, text_bbox[3]+2], fill=box_color)
         draw.text((x1, y1 - 25), label_text, font=font, fill=(255, 255, 255))
 
-    return cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
-
-
-def track_labels_for_duration(frame_generator, duration=5):
-
-    start_time = time.time()
-    label_counter = Counter()
-
-    while time.time() - start_time < duration:
-        frame = next(frame_generator, None)
-        if frame is None:
-            break
-
-        results = emotion_model(frame, verbose=False)
-        if results and len(results[0].boxes.data) > 0:
-            for box in results[0].boxes.data.tolist():
-                _, _, _, _, score, class_id = box
-                if score >= 0.6:
-                    english_label = emotion_model.names[int(class_id)]
-                    vietnamese_label = emotion_mapping.get(english_label, "Không xác định")
-                    label_counter[vietnamese_label] += 1
-
-    # Trả về nhãn tiếng Việt xuất hiện nhiều nhất
-    if label_counter:
-        return label_counter.most_common(1)[0][0]
-    return None
+    processed_frame = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
+    return processed_frame, last_emotion

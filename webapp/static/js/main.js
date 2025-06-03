@@ -1,3 +1,77 @@
+// Browser camera setup
+let videoStream = null;
+let videoElement = null;
+let canvasElement = null;
+let canvasContext = null;
+let yoloLabels = []; // Array to store YOLO labels
+
+// Function to log YOLO labels
+function logYoloLabels() {
+    console.log('YOLO Labels in first 5 seconds:', yoloLabels);
+    
+    // Count occurrences of each emotion
+    const emotionCount = {};
+    yoloLabels.forEach(emotion => {
+        emotionCount[emotion] = (emotionCount[emotion] || 0) + 1;
+    });
+    
+    // Find the most frequent emotion
+    let maxCount = 0;
+    let mostFrequentEmotion = '';
+    
+    for (const [emotion, count] of Object.entries(emotionCount)) {
+        if (count > maxCount) {
+            maxCount = count;
+            mostFrequentEmotion = emotion;
+        }
+    }
+    
+    console.log('Thống kê cảm xúc:');
+    console.log(emotionCount);
+    console.log(`Cảm xúc xuất hiện nhiều nhất: ${mostFrequentEmotion} (${maxCount} lần)`);
+
+    // Only trigger AI response, do not append user message manually
+    const chatInput = document.getElementById('chat-input');
+    chatInput.value = `Tôi đang cảm thấy ${mostFrequentEmotion}`;
+    document.getElementById('send-button').click();
+}
+
+async function initializeBrowserCamera() {
+    try {
+        videoElement = document.getElementById('browser-camera');
+        canvasElement = document.getElementById('camera-canvas');
+        canvasContext = canvasElement.getContext('2d');
+
+        videoStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            } 
+        });
+        videoElement.srcObject = videoStream;
+        
+        // Set canvas size to match video
+        videoElement.addEventListener('loadedmetadata', () => {
+            canvasElement.width = videoElement.videoWidth;
+            canvasElement.height = videoElement.videoHeight;
+        });
+
+        return true;
+    } catch (error) {
+        console.error('Error accessing camera:', error);
+        handleCameraError();
+        return false;
+    }
+}
+
+// Function to capture frame from browser camera
+function captureBrowserFrame() {
+    if (!videoElement || !canvasElement || !canvasContext) return null;
+    
+    canvasContext.drawImage(videoElement, 0, 0);
+    return canvasElement.toDataURL('image/jpeg', 0.8);
+}
+
 // Hàm xử lý khi có lỗi camera
 function handleCameraError() {
     const cameraContainer = document.querySelector('.camera-container');
@@ -88,53 +162,79 @@ function handleAudioPlayback(ttsUrl, aiMessage) {
     chatMessages.appendChild(wrapper);
 }
 
-
-document.addEventListener('DOMContentLoaded', async () => {
+// Function to process frame with YOLO
+async function processFrameWithYOLO() {
+    if (!videoElement || !canvasElement || !canvasContext) return;
+    
     try {
-        const response = await fetch('/api/track_yolo');
+        const frameData = captureBrowserFrame();
+        if (!frameData) return;
+
+        const response = await fetch('/api/yolo', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ frame: frameData })
+        });
+
         const result = await response.json();
-        console.log('API response:', result);
-
-        const chatMessages = document.getElementById('chat-messages');
-        const aiMessage = document.createElement('div');
-        aiMessage.className = 'message ai';
-
-        if (!response.ok) {
-            // Nếu status code 400 hoặc 500 thì hiện lỗi
-            if (response.status === 400 || response.status === 500) {
-                aiMessage.innerHTML = 'Lỗi khi phát hiện khuôn mặt';
-                chatMessages.appendChild(aiMessage);
-                return;
-            }
-        }
-
         if (result.error) {
-            console.error('Error:', result.error);
-            aiMessage.innerHTML = 'Lỗi khi phát hiện khuôn mặt';
-            chatMessages.appendChild(aiMessage);
+            console.error('Error processing frame:', result.error);
             return;
         }
 
-        if (result.response) {
-            aiMessage.innerHTML = result.response;
+        // Store YOLO label if available
+        if (result.label) {
+            yoloLabels.push(result.label);
         }
 
-        if (result.tts_url) {
-            handleAudioPlayback(result.tts_url, aiMessage);
-        } else {
-            chatMessages.appendChild(aiMessage);
-        }
-
+        // Update video element with processed frame
+        const img = new Image();
+        img.onload = () => {
+            // Draw the processed frame with bounding boxes
+            canvasContext.drawImage(img, 0, 0);
+            // Display the canvas instead of the video
+            videoElement.style.display = 'none';
+            canvasElement.style.display = 'block';
+        };
+        img.src = 'data:image/jpeg;base64,' + result.processed_frame;
     } catch (error) {
-        console.error('Error:', error);
-        const chatMessages = document.getElementById('chat-messages');
-        const aiMessage = document.createElement('div');
-        aiMessage.className = 'message ai';
-        aiMessage.innerHTML = 'Lỗi khi phát hiện khuôn mặt';
-        chatMessages.appendChild(aiMessage);
+        console.error('Error processing frame:', error);
+    }
+}
+
+// Start processing frames
+let processingInterval = null;
+
+function startFrameProcessing() {
+    if (processingInterval) return;
+    processingInterval = setInterval(processFrameWithYOLO, 100); // Process every 100ms for ~10 FPS
+}
+
+function stopFrameProcessing() {
+    if (processingInterval) {
+        clearInterval(processingInterval);
+        processingInterval = null;
+    }
+}
+
+// Update DOMContentLoaded to start frame processing
+document.addEventListener('DOMContentLoaded', async () => {
+    const success = await initializeBrowserCamera();
+    if (success) {
+        startFrameProcessing();
+        // Call trackYOLO instead of direct fetch
+        await trackYOLO();
+        
+        // Set timer to log YOLO labels after 5 seconds
+        setTimeout(() => {
+            logYoloLabels();
+            // Clear the labels array after logging
+            yoloLabels = [];
+        }, 5000);
     }
 });
-
 
 document.getElementById('send-button').addEventListener('click', async () => {
     const sendButton = document.getElementById('send-button');
@@ -205,7 +305,6 @@ document.getElementById('send-button').addEventListener('click', async () => {
         sendButton.disabled = false;
         sendButton.innerHTML = 'Send';
     }
-
 
     document.getElementById('chat-input').value = '';
 });
@@ -292,3 +391,64 @@ microphoneButton.addEventListener('click', async function () {
         chatInput.placeholder = "Chờ phản hồi Speech to Text";
     }
 });
+
+// Update track_yolo function to use browser camera
+async function trackYOLO() {
+    try {
+        const frameData = captureBrowserFrame();
+        if (!frameData) return;
+
+        const response = await fetch('/api/track_yolo', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ frame: frameData })
+        });
+
+        const result = await response.json();
+        console.log('API response:', result);
+
+        const chatMessages = document.getElementById('chat-messages');
+        const aiMessage = document.createElement('div');
+        aiMessage.className = 'message ai';
+
+        // Update the processed frame regardless of whether we got a label or not
+        if (result.processed_frame) {
+            const img = new Image();
+            img.onload = () => {
+                canvasContext.drawImage(img, 0, 0);
+                videoElement.style.display = 'none';
+                canvasElement.style.display = 'block';
+            };
+            img.src = 'data:image/jpeg;base64,' + result.processed_frame;
+        }
+
+        // Only show error message if there's an actual error
+        if (result.error && !result.processed_frame) {
+            console.error('Error:', result.error);
+            aiMessage.innerHTML = 'Lỗi khi phát hiện khuôn mặt';
+            chatMessages.appendChild(aiMessage);
+            return;
+        }
+
+        // If we have a response, show it
+        if (result.response) {
+            aiMessage.innerHTML = result.response;
+            chatMessages.appendChild(aiMessage);
+        }
+
+        // Handle TTS if available
+        if (result.tts_url) {
+            handleAudioPlayback(result.tts_url, aiMessage);
+        }
+
+    } catch (error) {
+        console.error('Error:', error);
+        const chatMessages = document.getElementById('chat-messages');
+        const aiMessage = document.createElement('div');
+        aiMessage.className = 'message ai';
+        aiMessage.innerHTML = 'Lỗi khi phát hiện khuôn mặt';
+        chatMessages.appendChild(aiMessage);
+    }
+}

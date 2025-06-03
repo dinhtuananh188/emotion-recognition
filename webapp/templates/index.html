@@ -12,13 +12,14 @@
         <div class="left-panel">
             <h2>Khung Camera</h2>
             <div class="camera-container">
-                <img src="{{ url_for('video_feed') }}" alt="Camera Feed">
+                <video id="browser-camera" class="camera-video" autoplay playsinline></video>
+                <canvas id="camera-canvas" class="camera-canvas"></canvas>
             </div>
         </div>
         <div class="right-panel">
             <h2>AI - Agent</h2>
             <div class="ai-agent-container">
-                <div class="chat-container" style="margin-left: auto;">
+                <div class="chat-container">
                     <div id="chat-messages" class="chat-messages"></div>
                     <div class="input-group">
                         <input type="text" id="chat-input" placeholder="Nhập tin nhắn của bạn...">

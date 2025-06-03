@@ -1,5 +1,16 @@
 import requests
 import logging
+from pydub import AudioSegment
+
+def convert_to_wav_mono_16k(src_path, dst_path):
+    """
+    Converts any audio file to WAV format with mono channel and 16kHz sample rate.
+    """
+    sound = AudioSegment.from_file(src_path)
+    sound = sound.set_channels(1)
+    sound = sound.set_frame_rate(16000)
+    sound.export(dst_path, format="wav")
+
 
 def transcribe_audio(audio_path, token):
     """

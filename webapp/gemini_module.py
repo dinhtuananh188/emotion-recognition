@@ -54,7 +54,7 @@ def generate_tts_audio(text, index):
         url = "https://viettelai.vn/tts/speech_synthesis"
         payload = json.dumps({
             "text": text,
-            "voice": "hcm-diemmy",
+            "voice": "hn-thanhha",
             "speed": 1,
             "tts_return_option": 3,
             "token": VIETTEL_TTS_API_KEY,
