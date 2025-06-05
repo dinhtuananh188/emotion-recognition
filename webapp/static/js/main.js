@@ -124,57 +124,13 @@ function extractYouTubeInfo(url) {
     return null;
 }
 
-// Cập nhật hàm phát âm thanh với nút nằm ngoài message
-function handleAudioPlayback(ttsUrl, aiMessage) {
-    const audio = new Audio(ttsUrl);
-
-    const wrapper = document.createElement('div');
-    wrapper.className = 'message-wrapper';
-
-    const playPauseButton = document.createElement('button');
-    playPauseButton.innerHTML = '⏸';
-    playPauseButton.className = 'audio-button';
-
-    let isPlaying = true;
-    audio.play();
-
-    // Khi phát xong thì đổi icon về ▶
-    audio.addEventListener('ended', () => {
-        playPauseButton.innerHTML = '▶';
-        isPlaying = false;
-    });
-
-    playPauseButton.addEventListener('click', () => {
-        if (isPlaying) {
-            audio.pause();
-            playPauseButton.innerHTML = '▶';
-        } else {
-            audio.play();
-            playPauseButton.innerHTML = '⏸';
-        }
-        isPlaying = !isPlaying;
-    });
-
-    wrapper.appendChild(playPauseButton);
-    wrapper.appendChild(aiMessage); // aiMessage là div.message.ai
-
-    const chatMessages = document.getElementById('chat-messages');
-    chatMessages.appendChild(wrapper);
-}
-
 // Function to process frame with YOLO
-let isProcessing = false;
 async function processFrameWithYOLO() {
-    if (!videoElement || !canvasElement || !canvasContext || isProcessing) return;
+    if (!videoElement || !canvasElement || !canvasContext) return;
     
-    isProcessing = true;
-
     try {
         const frameData = captureBrowserFrame();
-        if (!frameData) {
-            isProcessing = false;
-            return;
-        }
+        if (!frameData) return;
 
         const response = await fetch('/api/yolo', {
             method: 'POST',
@@ -187,7 +143,6 @@ async function processFrameWithYOLO() {
         const result = await response.json();
         if (result.error) {
             console.error('Error processing frame:', result.error);
-            // Keep processing even if there's an error with this frame
             return;
         }
 
@@ -206,13 +161,8 @@ async function processFrameWithYOLO() {
             canvasElement.style.display = 'block';
         };
         img.src = 'data:image/jpeg;base64,' + result.processed_frame;
-
     } catch (error) {
         console.error('Error processing frame:', error);
-    } finally {
-        isProcessing = false;
-        // Process the next frame after a short delay
-        setTimeout(processFrameWithYOLO, 100); 
     }
 }
 
@@ -220,39 +170,68 @@ async function processFrameWithYOLO() {
 let processingInterval = null;
 
 function startFrameProcessing() {
-    // Stop the interval if it was running
-    if (processingInterval) {
-        clearInterval(processingInterval);
-        processingInterval = null;
-    }
-    // Start the processing loop
-    processFrameWithYOLO();
+    if (processingInterval) return;
+    processingInterval = setInterval(processFrameWithYOLO, 100); // Process every 100ms for ~10 FPS
 }
 
 function stopFrameProcessing() {
-    // This function is not used in the new loop, but keep it for completeness
-    // if the interval was ever used elsewhere.
     if (processingInterval) {
         clearInterval(processingInterval);
         processingInterval = null;
     }
-    // No need to stop setTimeout loops explicitly unless you add a flag
 }
 
-// Update DOMContentLoaded to start frame processing
 document.addEventListener('DOMContentLoaded', async () => {
+    yoloLabels = []; // Reset YOLO labels
+    document.getElementById('chat-messages').innerHTML = ''; // Clear chat messages
+    try {
+        await fetch('/api/clear_temp_dirs', { method: 'DELETE' });
+        console.log('Đã yêu cầu server xóa thư mục tạm');
+    } catch (error) {
+        console.error('Lỗi khi gửi yêu cầu xóa thư mục:', error);
+    }
     const success = await initializeBrowserCamera();
     if (success) {
         startFrameProcessing();
-        
-        // Set timer to log YOLO labels after 5 seconds
+        await trackYOLO();
         setTimeout(() => {
             logYoloLabels();
-            // Clear the labels array after logging
             yoloLabels = [];
         }, 5000);
     }
 });
+
+function handleAudioPlayback(ttsUrl, aiMessage) {
+    const audio = new Audio(ttsUrl);
+    const wrapper = document.createElement('div');
+    wrapper.className = 'message-wrapper';
+
+    const playPauseButton = document.createElement('button');
+    playPauseButton.innerHTML = '▶'; // Start with play icon
+    playPauseButton.className = 'audio-button';
+
+    let isPlaying = false;
+    audio.addEventListener('ended', () => {
+        playPauseButton.innerHTML = '▶';
+        isPlaying = false;
+    });
+
+    playPauseButton.addEventListener('click', () => {
+        if (isPlaying) {
+            audio.pause();
+            playPauseButton.innerHTML = '▶';
+        } else {
+            audio.play();
+            playPauseButton.innerHTML = '⏸';
+        }
+        isPlaying = !isPlaying;
+    });
+
+    wrapper.appendChild(playPauseButton);
+    wrapper.appendChild(aiMessage);
+    const chatMessages = document.getElementById('chat-messages');
+    chatMessages.appendChild(wrapper);
+}
 
 document.getElementById('send-button').addEventListener('click', async () => {
     const sendButton = document.getElementById('send-button');
@@ -353,14 +332,10 @@ microphoneButton.addEventListener('click', async function () {
         const audioChunks = [];
 
         mediaRecorder.ondataavailable = (event) => {
-            
             audioChunks.push(event.data);
         };
 
         mediaRecorder.onstop = async () => {
-            // Đổi placeholder thành "Chờ phản hồi Speech to Text" khi dừng ghi âm
-            
-
             const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
             const formData = new FormData();
             formData.append('audio', audioBlob, 'audio.wav');

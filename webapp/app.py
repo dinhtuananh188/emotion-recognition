@@ -9,6 +9,8 @@ import os
 from stt_module import transcribe_audio, convert_to_wav_mono_16k
 from waitress import serve
 import base64
+import shutil
+import time
 
 # Cấu hình logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -19,6 +21,20 @@ app.secret_key = '123456'
 
 # Ensure the 'uploads' directory exists
 uploads_dir = 'webapp/uploads'
+audio_dir = 'webapp/static/audio'
+
+@app.route('/api/clear_temp_dirs', methods=['DELETE'])
+def clear_temp_dirs():
+    try:
+        # Xác định thư mục cần xóa
+        for folder in ['upload_dir', 'audio_dir']:
+            if os.path.exists(folder):
+                shutil.rmtree(folder)
+                os.makedirs(folder)  # Tạo lại thư mục trống
+
+        return {'status': 'success'}, 200
+    except Exception as e:
+        return {'error': str(e)}, 500
 
 @app.route('/')
 def index():
@@ -66,29 +82,6 @@ def process_yolo():
 def track_yolo():
     try:
         logging.debug("Starting YOLO tracking...")
-        audio_dir = 'webapp/static/audio'
-        os.makedirs(audio_dir, exist_ok=True)
-
-        # Clear all files in the 'uploads' directory
-        for file_name in os.listdir(audio_dir):
-            file_path = os.path.join(audio_dir, file_name)
-            try:
-                if os.path.isfile(file_path):
-                    os.unlink(file_path)
-            except Exception as e:
-                logging.error(f"Error deleting file {file_path}: {e}")
-        
-        
-        os.makedirs(uploads_dir, exist_ok=True)
-
-        # Clear all files in the 'uploads' directory
-        for file_name in os.listdir(uploads_dir):
-            file_path = os.path.join(uploads_dir, file_name)
-            try:
-                if os.path.isfile(file_path):
-                    os.unlink(file_path)
-            except Exception as e:
-                logging.error(f"Error deleting file {file_path}: {e}")
 
         # Get base64 image data from request
         image_data = request.json.get('frame')
@@ -133,13 +126,17 @@ def gemini_request():
             logging.warning("Missing user input in Gemini request.")
             return jsonify({"error": "Missing user input."}), 400
 
-        logging.debug(f"User input: {user_input}")
         result = handle_request(user_input, session)
-        
-        return jsonify({
+        tts_url = result.get("tts_url")
+        if tts_url:
+            tts_url = f"{tts_url}?t={int(time.time())}"  # Add cache-busting parameter
+
+        resp = jsonify({
             "response": result.get("response"),
-            "tts_url": result.get("tts_url")
+            "tts_url": tts_url
         })
+        resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        return resp
     except Exception as e:
         logging.error(f"Error in /api/gemini: {e}")
         return jsonify({"error": str(e)}), 500
